@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { OnMount } from "@monaco-editor/react";
 import type { editor as MonacoEditorTypes } from "monaco-editor";
+import { useNavigate } from "react-router-dom";
 
 import {
   Plus,
@@ -24,10 +25,21 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import MonacoEditor from "../monaco/components/MonacoEditor";
 import EditorSettingsModal from "../monaco/components/EditorSettingsModal";
 import ExecutionPanel from "../shared/components/ExecutionPanel";
-import type { ConsoleMessage } from "../console/components/ConsolePanel";
+import type { ExecutionPanelTab } from "../shared/components/ExecutionPanel";
 
 import { LANGUAGES } from "../monaco/constants/languages";
 import { useEditorTabs } from "./hooks/useEditorTabs";
+import { useExecution } from "../hooks/useExecution";
+import {
+  ENTRY_FILENAMES,
+  isExecutionLanguage,
+} from "../services/execution.api";
+import { useAuth } from "../../auth/hooks/useAuth";
+import {
+  clearPendingEditorDraft,
+  readPendingEditorDraft,
+  savePendingEditorDraft,
+} from "../services/editor-draft";
 
 import { DEFAULT_EDITOR_SETTINGS } from "../monaco/types/editor-settings.types";
 
@@ -51,6 +63,9 @@ function loadEditorSettings(): EditorSettings {
 }
 
 function Editor() {
+  const { user, isLoading: isAuthLoading, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const [pendingEditorDraft] = useState(readPendingEditorDraft);
   const {
     tabs,
     activeTab,
@@ -59,130 +74,113 @@ function Editor() {
     addTab,
     closeTab,
     updateActiveTab,
-  } = useEditorTabs();
+  } = useEditorTabs(pendingEditorDraft);
 
-  const [input, setInput] = useState("");
-  const [output, setOutput] = useState("");
+  const [input, setInput] = useState(pendingEditorDraft?.stdin ?? "");
+  const [activePanel, setActivePanel] = useState<ExecutionPanelTab>("io");
+  const [authRedirectError, setAuthRedirectError] = useState<string | null>(null);
+  const editorDraftRef = useRef({
+    code: activeTab.code,
+    language: activeTab.language,
+    stdin: input,
+  });
 
-  // cosole
-  const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
-  const clearConsole = () => {
-    setConsoleMessages([]);
-  };
+  useEffect(() => {
+    editorDraftRef.current = {
+      code: activeTab.code,
+      language: activeTab.language,
+      stdin: input,
+    };
+  }, [activeTab.code, activeTab.language, input]);
 
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
+  useEffect(() => {
+    clearPendingEditorDraft();
+  }, []);
 
-  const addConsoleMessage = (type: ConsoleMessage["type"], text: string) => {
-    setConsoleMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        type,
-        text,
-        timestamp: new Date().toLocaleTimeString(),
-      },
-    ]);
-  };
+  const handleAuthenticationRequired = useCallback(async () => {
+    try {
+      const currentUser = await refreshUser();
 
-  const testStreaming = async () => {
-    setConsoleMessages([]);
+      if (currentUser) return;
 
-    addConsoleMessage("system", "Compilation started...");
-    await delay(1000);
+      savePendingEditorDraft(editorDraftRef.current);
+      navigate("/login", {
+        state: {
+          returnTo: "/editor",
+          message:
+            "Your session expired. Sign in to continue; your code and input were saved.",
+        },
+      });
+    } catch (error) {
+      setAuthRedirectError(
+        error instanceof Error
+          ? error.message
+          : "Unable to verify your session. Please try again.",
+      );
+    }
+  }, [navigate, refreshUser]);
 
-    addConsoleMessage("system", "Compilation successful.");
-    await delay(1000);
+  const {
+    execution,
+    submitExecution,
+    cancelExecution,
+    reportError,
+    clearExecution,
+  } = useExecution({
+    onAuthenticationRequired: handleAuthenticationRequired,
+  });
 
-    addConsoleMessage("output", "Program started...");
-    await delay(2000);
+  const handleRun = async () => {
+    setAuthRedirectError(null);
 
-    addConsoleMessage("output", "Processing data...");
-    await delay(2000);
+    if (activePanel !== "io" || isAuthLoading) return;
 
-    addConsoleMessage("output", "Almost done...");
-    await delay(2000);
+    if (!user) {
+      try {
+        savePendingEditorDraft(editorDraftRef.current);
+        navigate("/login", {
+          state: { returnTo: "/editor" },
+        });
+      } catch (error) {
+        setAuthRedirectError(
+          error instanceof Error
+            ? error.message
+            : "Unable to save your code before signing in.",
+        );
+      }
 
-    addConsoleMessage("output", "Execution completed!");
-    await delay(500);
-
-    addConsoleMessage("system", "Program executed successfully.");
-  };
-
-  const testInteractiveInput = async () => {
-    setConsoleMessages([]);
-
-    addConsoleMessage("system", "Compilation started...");
-    await delay(1000);
-
-    addConsoleMessage("system", "Compilation successful.");
-    await delay(500);
-
-    addConsoleMessage("output", "Program started...");
-    await delay(1000);
-
-    addConsoleMessage("system", "Waiting for input...");
-    addConsoleMessage("output", "Enter a number:");
-
-    const input = window.prompt(
-      "Program is waiting for input. Enter a number:",
-    );
-
-    if (input === null || input.trim() === "") {
-      addConsoleMessage("error", "Input was cancelled or empty.");
       return;
     }
 
-    addConsoleMessage("system", `Input received: ${input}`);
-    await delay(1000);
+    const language = activeTab.language;
 
-    const number = Number(input);
-
-    if (!Number.isFinite(number)) {
-      addConsoleMessage("error", "Invalid integer input.");
+    if (!isExecutionLanguage(language)) {
+      reportError("The selected language is not supported for execution.");
       return;
     }
 
-    addConsoleMessage("output", `You entered: ${number}`);
-    addConsoleMessage("output", `Square: ${number * number}`);
-
-    await delay(500);
-
-    addConsoleMessage("system", "Program executed successfully.");
+    await submitExecution({
+      language,
+      files: [
+        {
+          name: ENTRY_FILENAMES[language],
+          content: activeTab.code,
+        },
+      ],
+      stdin: input,
+    });
   };
 
-  const testInputTimeout = async () => {
-    setConsoleMessages([]);
+  const executionBusy =
+    execution.status === "submitting" ||
+    execution.status === "queued" ||
+    execution.status === "running" ||
+    execution.status === "cancelling";
 
-    addConsoleMessage("system", "Compilation started...");
-    await delay(1000);
+  const executionForPanel = authRedirectError
+    ? { ...execution, error: authRedirectError }
+    : execution;
 
-    addConsoleMessage("system", "Compilation successful.");
-    await delay(500);
-
-    addConsoleMessage("output", "Waiting for your input...");
-    addConsoleMessage("system", "Input required. Waiting for stdin...");
-
-    await delay(8000);
-
-    addConsoleMessage(
-      "error",
-      "Input timeout: No input received within 8 seconds.",
-    );
-    addConsoleMessage("system", "Execution terminated.");
-  };
-
-  const testConsole = () => {
-    const scenario = Math.floor(Math.random() * 3);
-
-    if (scenario === 0) {
-      testStreaming();
-    } else if (scenario === 1) {
-      testInteractiveInput();
-    } else {
-      testInputTimeout();
-    }
-  };
   // Editor settings
   const [settings, setSettings] = useState<EditorSettings>(loadEditorSettings);
 
@@ -238,7 +236,7 @@ function Editor() {
       code: currentLanguage.defaultCode,
     });
 
-    setOutput("");
+    clearExecution();
   };
 
   // --------------------------------
@@ -424,7 +422,7 @@ function Editor() {
                         code: language.defaultCode,
                       });
 
-                      setOutput("");
+                      clearExecution();
                     }}
                     className="cursor-pointer appearance-none rounded-lg bg-transparent py-2 pl-2 pr-8 text-sm font-medium text-gray-200 outline-none hover:bg-[#1c1d24]"
                   >
@@ -468,12 +466,19 @@ function Editor() {
                   </button>
 
                   <button
-                    onClick={testConsole}
-                    title="Code execution will be added later"
-                    className="flex cursor-not-allowed items-center gap-2 rounded-lg bg-[#3478f6] px-4 py-2 text-sm font-semibold text-white opacity-70"
+                    onClick={handleRun}
+                    disabled={
+                      isAuthLoading || activePanel !== "io" || executionBusy
+                    }
+                    title={
+                      activePanel === "io"
+                        ? "Run code"
+                        : "Switch to I/O to run code"
+                    }
+                    className="flex items-center gap-2 rounded-lg bg-[#3478f6] px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Play size={15} fill="currentColor" />
-                    Run
+                    {execution.status === "submitting" ? "Submitting..." : "Run"}
                   </button>
                 </div>
               </div>
@@ -521,9 +526,9 @@ function Editor() {
               <ExecutionPanel
                 input={input}
                 onInputChange={setInput}
-                output={output}
-                consoleMessages={consoleMessages}
-                onClearConsole={clearConsole}
+                execution={executionForPanel}
+                onCancel={cancelExecution}
+                onActiveTabChange={setActivePanel}
               />
             </section>
           </Panel>

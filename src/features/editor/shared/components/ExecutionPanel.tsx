@@ -2,18 +2,17 @@ import { useState } from "react";
 import { ArrowLeftRight, Terminal, SquareTerminal } from "lucide-react";
 
 import InputOutputPanel from "../../input-output/components/InputOutputPanel";
-import ConsolePanel, {
-  type ConsoleMessage,
-} from "../../console/components/ConsolePanel";
+import ConsolePanel from "../../console/components/ConsolePanel";
+import type { ExecutionViewState } from "../../hooks/useExecution";
 
-type PanelTab = "io" | "console" | "terminal";
+export type ExecutionPanelTab = "io" | "console" | "terminal";
 
 interface ExecutionPanelProps {
   input: string;
   onInputChange: (value: string) => void;
-  output: string;
-  consoleMessages: ConsoleMessage[];
-  onClearConsole: () => void;
+  execution: ExecutionViewState;
+  onCancel: () => void;
+  onActiveTabChange: (tab: ExecutionPanelTab) => void;
 }
 
 const tabs = [
@@ -25,11 +24,16 @@ const tabs = [
 function ExecutionPanel({
   input,
   onInputChange,
-  output,
-  consoleMessages,
-  onClearConsole,
+  execution,
+  onCancel,
+  onActiveTabChange,
 }: ExecutionPanelProps) {
-  const [activeTab, setActiveTab] = useState<PanelTab>("io");
+  const [activeTab, setActiveTab] = useState<ExecutionPanelTab>("io");
+
+  const selectTab = (tab: ExecutionPanelTab) => {
+    setActiveTab(tab);
+    onActiveTabChange(tab);
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -42,7 +46,7 @@ function ExecutionPanel({
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => selectTab(tab.id)}
               className={`relative flex h-8 items-center gap-2 rounded-md px-3 text-xs font-medium transition-colors ${
                 isActive
                   ? "bg-[#202633] text-white"
@@ -71,7 +75,8 @@ function ExecutionPanel({
           <InputOutputPanel
             input={input}
             setInput={onInputChange}
-            output={output}
+            execution={execution}
+            onCancel={onCancel}
           />
         </div>
 
@@ -80,9 +85,7 @@ function ExecutionPanel({
             activeTab === "console" ? "visible" : "invisible"
           }`}
         >
-          <div className="flex h-full items-center justify-center bg-[#0b0e16]">
-            <ConsolePanel messages={consoleMessages} onClear={onClearConsole} />
-          </div>
+          <ConsolePanel />
         </div>
 
         <div

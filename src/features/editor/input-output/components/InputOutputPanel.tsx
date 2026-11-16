@@ -2,14 +2,21 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 
 import InputPanel from "./InputPanel";
 import OutputPanel from "./OutputPanel";
+import type { ExecutionViewState } from "../../hooks/useExecution";
 
 interface InputOutputPanelProps {
   input: string;
   setInput: (value: string) => void;
-  output: string;
+  execution: ExecutionViewState;
+  onCancel: () => void;
 }
 
-function InputOutputPanel({ input, setInput, output }: InputOutputPanelProps) {
+function InputOutputPanel({
+  input,
+  setInput,
+  execution,
+  onCancel,
+}: InputOutputPanelProps) {
   return (
     <Group orientation="vertical" className="h-full w-full min-h-0">
       <Panel defaultSize={50} minSize={50}>
@@ -21,7 +28,7 @@ function InputOutputPanel({ input, setInput, output }: InputOutputPanelProps) {
       </Separator>
 
       <Panel defaultSize={50} minSize={50}>
-        <OutputPanel output={output} />
+        <OutputPanel execution={execution} onCancel={onCancel} />
       </Panel>
     </Group>
   );
