@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Download, Copy, Terminal, Check, X } from "lucide-react";
 
 import type { ExecutionViewState } from "../../hooks/useExecution";
@@ -22,12 +23,109 @@ const STATUS_LABELS: Record<ExecutionViewState["status"], string> = {
   internal_error: "Execution error",
 };
 
+const ANSI_COLORS = [
+  "#111827",
+  "#f87171",
+  "#4ade80",
+  "#facc15",
+  "#60a5fa",
+  "#e879f9",
+  "#22d3ee",
+  "#e5e7eb",
+];
+
+const ANSI_BRIGHT_COLORS = [
+  "#6b7280",
+  "#fca5a5",
+  "#86efac",
+  "#fde047",
+  "#93c5fd",
+  "#f0abfc",
+  "#67e8f9",
+  "#f9fafb",
+];
+
+const ANSI_SGR_PATTERN = new RegExp(
+  `${String.fromCharCode(27)}\\[([0-9;]*)m`,
+  "g",
+);
+
+function applyAnsiCode(style: CSSProperties, code: number): CSSProperties {
+  if (code === 0) return {};
+  if (code === 1) return { ...style, fontWeight: "bold" };
+  if (code === 2) return { ...style, opacity: 0.65 };
+  if (code === 22) {
+    const nextStyle = { ...style };
+    delete nextStyle.fontWeight;
+    delete nextStyle.opacity;
+    return nextStyle;
+  }
+  if (code === 39) {
+    const nextStyle = { ...style };
+    delete nextStyle.color;
+    return nextStyle;
+  }
+  if (code === 49) {
+    const nextStyle = { ...style };
+    delete nextStyle.backgroundColor;
+    return nextStyle;
+  }
+  if (code >= 30 && code <= 37) {
+    return { ...style, color: ANSI_COLORS[code - 30] };
+  }
+  if (code >= 40 && code <= 47) {
+    return { ...style, backgroundColor: ANSI_COLORS[code - 40] };
+  }
+  if (code >= 90 && code <= 97) {
+    return { ...style, color: ANSI_BRIGHT_COLORS[code - 90] };
+  }
+  if (code >= 100 && code <= 107) {
+    return { ...style, backgroundColor: ANSI_BRIGHT_COLORS[code - 100] };
+  }
+
+  return style;
+}
+
+function renderAnsiText(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  const ansiSequence = new RegExp(ANSI_SGR_PATTERN.source, "g");
+  let style: CSSProperties = {};
+  let lastIndex = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = ansiSequence.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(
+        <span key={key++} style={style}>
+          {text.slice(lastIndex, match.index)}
+        </span>,
+      );
+    }
+
+    const codes = match[1] ? match[1].split(";").map(Number) : [0];
+    style = codes.reduce(applyAnsiCode, style);
+    lastIndex = ansiSequence.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(
+      <span key={key} style={style}>
+        {text.slice(lastIndex)}
+      </span>,
+    );
+  }
+
+  return parts;
+}
+
 function OutputPanel({ execution, onCancel }: OutputPanelProps) {
   const [copied, setCopied] = useState(false);
 
   const stdout = execution.result?.stdout ?? "";
   const stderr = execution.result?.stderr ?? "";
   const output = [stdout, stderr, execution.error].filter(Boolean).join("\n");
+  const plainOutput = output.replace(new RegExp(ANSI_SGR_PATTERN.source, "g"), "");
   const hasOutput = output.length > 0;
   const canCancel =
     execution.status === "queued" || execution.status === "running";
@@ -36,7 +134,7 @@ function OutputPanel({ execution, onCancel }: OutputPanelProps) {
     if (!hasOutput) return;
 
     try {
-      await navigator.clipboard.writeText(output);
+      await navigator.clipboard.writeText(plainOutput);
       setCopied(true);
 
       setTimeout(() => setCopied(false), 1500);
@@ -48,7 +146,7 @@ function OutputPanel({ execution, onCancel }: OutputPanelProps) {
   const handleDownload = () => {
     if (!hasOutput) return;
 
-    const blob = new Blob([output], {
+    const blob = new Blob([plainOutput], {
       type: "text/plain;charset=utf-8",
     });
 
@@ -167,12 +265,12 @@ function OutputPanel({ execution, onCancel }: OutputPanelProps) {
             )}
             {stdout && (
               <pre className="whitespace-pre-wrap break-words text-gray-200">
-                {stdout}
+                {renderAnsiText(stdout)}
               </pre>
             )}
             {stderr && (
               <pre className="whitespace-pre-wrap break-words text-red-300">
-                {stderr}
+                {renderAnsiText(stderr)}
               </pre>
             )}
             {execution.error && (
