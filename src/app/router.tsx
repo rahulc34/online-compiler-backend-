@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+import RouteMetadata from "./RouteMetadata";
 import Home from "../features/home/pages/Home";
 import Editor from "../features/editor/editor/Editor";
 import Login from "../features/auth/pages/Login";
@@ -8,9 +9,10 @@ import VerifyEmail from "../features/auth/pages/VerifyEmail";
 import ForgotPassword from "../features/auth/pages/ForgotPassword";
 import ResetPassword from "../features/auth/pages/ResetPassword";
 
-function AppRouter() {
+export function AppRoutes() {
   return (
-    <BrowserRouter>
+    <>
+      <RouteMetadata />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/editor" element={<Editor />} />
@@ -20,6 +22,14 @@ function AppRouter() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
+    </>
+  );
+}
+
+function AppRouter() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

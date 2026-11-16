@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   Play,
-  Zap,
   CheckCircle2,
   Sun,
   Copy,
@@ -59,9 +58,9 @@ function Hero() {
 
           {/* Heading */}
           <h1 className="text-5xl sm:text-6xl xl:text-7xl font-bold tracking-tight leading-[1.1] text-white">
-            Write Code.
+            Online Compiler
             <br />
-            Run It.
+            Write Code. Run It.
             <span className="block mt-2 bg-gradient-to-r from-blue-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
               Build Something.
             </span>
