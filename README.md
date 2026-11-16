@@ -7,6 +7,18 @@ Currently, two official plugins are available:
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
+## SEO and production domain
+
+Set `VITE_SITE_URL` to the HTTPS origin used by the deployment (currently
+`https://cloudide.in`) in the build environment. `npm run build` pre-renders the
+homepage and generates `robots.txt` and `sitemap.xml` in `dist`. The sitemap
+currently lists only the public homepage; editor and account routes are not
+intended for indexing.
+
+Deploy the contents of `dist` and configure the host to serve the SPA entry point
+for application routes. Set `VITE_SITE_URL` in the hosting provider's build
+environment as well; the local `.env` file is ignored by Git.
+
 ## React Compiler
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).

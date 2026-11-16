@@ -38,6 +38,26 @@ function setMetaContent(selector: string, content: string) {
   element?.setAttribute("content", content);
 }
 
+function updateCanonicalUrl(pathname: string) {
+  const existingCanonical =
+    document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+
+  if (pathname !== "/") {
+    existingCanonical?.remove();
+    return;
+  }
+
+  const siteUrl = import.meta.env.VITE_SITE_URL;
+  if (!siteUrl) return;
+
+  const canonical =
+    existingCanonical ?? document.createElement("link");
+  canonical.rel = "canonical";
+  canonical.href = new URL("/", siteUrl).href;
+
+  if (!existingCanonical) document.head.append(canonical);
+}
+
 function RouteMetadata() {
   const { pathname } = useLocation();
 
@@ -55,6 +75,7 @@ function RouteMetadata() {
       'meta[name="robots"]',
       pathname === "/" ? "index, follow" : "noindex, follow",
     );
+    updateCanonicalUrl(pathname);
   }, [pathname]);
 
   return null;
