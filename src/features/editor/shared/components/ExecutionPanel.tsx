@@ -31,6 +31,39 @@ const tabs = [
   { id: "terminal", label: "Terminal", icon: SquareTerminal },
 ] as const;
 
+const TAB_STYLES: Record<
+  ExecutionPanelTab,
+  {
+    active: string;
+    inactive: string;
+    icon: string;
+    indicator: string;
+    focus: string;
+  }
+> = {
+  io: {
+    active: "bg-blue-500/15 text-blue-100",
+    inactive: "text-gray-400 hover:bg-blue-500/10 hover:text-blue-200",
+    icon: "text-blue-300",
+    indicator: "bg-blue-400",
+    focus: "focus-visible:ring-blue-400/70",
+  },
+  console: {
+    active: "bg-violet-500/15 text-violet-100",
+    inactive: "text-gray-400 hover:bg-violet-500/10 hover:text-violet-200",
+    icon: "text-violet-300",
+    indicator: "bg-violet-400",
+    focus: "focus-visible:ring-violet-400/70",
+  },
+  terminal: {
+    active: "bg-emerald-500/15 text-emerald-100",
+    inactive: "text-gray-400 hover:bg-emerald-500/10 hover:text-emerald-200",
+    icon: "text-emerald-300",
+    indicator: "bg-emerald-400",
+    focus: "focus-visible:ring-emerald-400/70",
+  },
+};
+
 function ExecutionPanel({
   input,
   onInputChange,
@@ -103,22 +136,24 @@ function ExecutionPanel({
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
+            const tabStyle = TAB_STYLES[tab.id];
 
             return (
               <button
                 key={tab.id}
                 onClick={() => selectTab(tab.id)}
-                className={`relative flex h-8 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-medium transition-colors ${
-                  isActive
-                    ? "bg-[#202633] text-white"
-                    : "text-gray-500 hover:bg-white/[0.04] hover:text-gray-300"
+                aria-pressed={isActive}
+                className={`relative flex h-8 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset ${tabStyle.focus} ${
+                  isActive ? tabStyle.active : tabStyle.inactive
                 }`}
               >
-                <Icon size={14} />
+                <Icon size={14} className={tabStyle.icon} />
                 {tab.label}
 
                 {isActive && (
-                  <span className="absolute inset-x-2 -bottom-[9px] h-[2px] rounded-full bg-blue-500" />
+                  <span
+                    className={`absolute inset-x-2 -bottom-[9px] h-[2px] rounded-full ${tabStyle.indicator}`}
+                  />
                 )}
               </button>
             );
@@ -152,6 +187,9 @@ function ExecutionPanel({
                 </span>
                 <span className="hidden truncate text-xs font-medium text-gray-300 xl:block">
                   {user.name}
+                </span>
+                <span className="text-xs font-medium text-gray-300 xl:hidden">
+                  Account
                 </span>
                 <ChevronDown
                   size={12}
@@ -251,10 +289,10 @@ function ExecutionPanel({
             <div className="text-center">
               <SquareTerminal
                 size={25}
-                className="mx-auto mb-3 text-gray-600"
+                className="mx-auto mb-3 text-emerald-400"
               />
-              <p className="text-sm font-medium text-gray-400">Terminal</p>
-              <p className="mt-1 text-xs text-gray-600">
+              <p className="text-sm font-medium text-emerald-200">Terminal</p>
+              <p className="mt-2 inline-flex rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300">
                 Interactive terminal coming soon.
               </p>
             </div>
