@@ -18,6 +18,7 @@ import {
   FolderOpen,
   Share2,
   X,
+  LoaderCircle,
 } from "lucide-react";
 
 import { Group, Panel, Separator } from "react-resizable-panels";
@@ -78,7 +79,9 @@ function Editor() {
 
   const [input, setInput] = useState(pendingEditorDraft?.stdin ?? "");
   const [activePanel, setActivePanel] = useState<ExecutionPanelTab>("io");
-  const [authRedirectError, setAuthRedirectError] = useState<string | null>(null);
+  const [authRedirectError, setAuthRedirectError] = useState<string | null>(
+    null,
+  );
   const editorDraftRef = useRef({
     code: activeTab.code,
     language: activeTab.language,
@@ -470,6 +473,7 @@ function Editor() {
                     disabled={
                       isAuthLoading || activePanel !== "io" || executionBusy
                     }
+                    aria-busy={executionBusy}
                     title={
                       activePanel === "io"
                         ? "Run code"
@@ -477,8 +481,29 @@ function Editor() {
                     }
                     className="flex items-center gap-2 rounded-lg bg-[#3478f6] px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <Play size={15} fill="currentColor" />
-                    {execution.status === "submitting" ? "Submitting..." : "Run"}
+                    {executionBusy ? (
+                      <>
+                        <LoaderCircle
+                          size={15}
+                          aria-hidden="true"
+                          className="animate-spin"
+                        />
+                        <span aria-live="polite">
+                          {execution.status === "submitting"
+                            ? "Submitting..."
+                            : execution.status === "queued"
+                              ? "Queued..."
+                              : execution.status === "cancelling"
+                                ? "Cancelling..."
+                                : "Running..."}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Play size={15} fill="currentColor" />
+                        Run
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
