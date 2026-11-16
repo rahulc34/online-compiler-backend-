@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OnMount } from "@monaco-editor/react";
+import type { ReactNode } from "react";
 import type { editor as MonacoEditorTypes } from "monaco-editor";
 import { useNavigate } from "react-router-dom";
 
@@ -47,6 +48,35 @@ import { DEFAULT_EDITOR_SETTINGS } from "../monaco/types/editor-settings.types";
 import type { EditorSettings } from "../monaco/types/editor-settings.types";
 
 const SETTINGS_STORAGE_KEY = "compiler-editor-settings";
+
+interface IconTooltipProps {
+  label: string;
+  focusable?: boolean;
+  children: ReactNode;
+}
+
+function IconTooltip({
+  label,
+  focusable = false,
+  children,
+}: IconTooltipProps) {
+  return (
+    <span
+      className="group relative inline-flex"
+      tabIndex={focusable ? 0 : undefined}
+      role={focusable ? "img" : undefined}
+      aria-label={focusable ? label : undefined}
+    >
+      {children}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full right-0 z-50 mb-2 whitespace-nowrap rounded-md border border-[#3b3d48] bg-[#0d0e12] px-2 py-1 text-[11px] font-medium text-gray-200 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
+      >
+        {label}
+      </span>
+    </span>
+  );
+}
 
 function loadEditorSettings(): EditorSettings {
   try {
@@ -243,37 +273,6 @@ function Editor() {
   };
 
   // --------------------------------
-  // FORMAT CODE
-  // --------------------------------
-
-  const handleFormatCode = async () => {
-    try {
-      const editor = editorRef.current;
-
-      if (!editor) return;
-
-      const formatAction = editor.getAction("editor.action.formatDocument");
-
-      if (!formatAction) {
-        console.warn("Formatter is not available.");
-        return;
-      }
-
-      await formatAction.run();
-
-      // Get the formatted code directly from Monaco
-      const formattedCode = editor.getValue();
-      console.log(formattedCode);
-      // Update React state
-      updateActiveTab({
-        code: formattedCode,
-      });
-    } catch (error) {
-      console.error("Unable to format code:", error);
-    }
-  };
-
-  // --------------------------------
   // COPY CODE
   // --------------------------------
 
@@ -454,12 +453,13 @@ function Editor() {
                     />
                   </button>
 
-                  <button onClick={handleFormatCode} title="Format code">
+                  <IconTooltip label="Format code - coming soon" focusable>
                     <Paintbrush
                       size={16}
-                      className="text-gray-400 hover:text-white"
+                      aria-hidden="true"
+                      className="text-gray-500"
                     />
-                  </button>
+                  </IconTooltip>
 
                   <button onClick={handleCopyCode} title="Copy code">
                     <Copy
@@ -532,9 +532,27 @@ function Editor() {
                     <Download size={16} className="hover:text-white" />
                   </button>
 
-                  <FolderOpen size={17} />
-                  <Save size={16} />
-                  <Share2 size={16} />
+                  <IconTooltip label="Workspace - coming soon" focusable>
+                    <FolderOpen
+                      size={17}
+                      aria-hidden="true"
+                      className="text-gray-500"
+                    />
+                  </IconTooltip>
+                  <IconTooltip label="Save - coming soon" focusable>
+                    <Save
+                      size={16}
+                      aria-hidden="true"
+                      className="text-gray-500"
+                    />
+                  </IconTooltip>
+                  <IconTooltip label="Share - coming soon" focusable>
+                    <Share2
+                      size={16}
+                      aria-hidden="true"
+                      className="text-gray-500"
+                    />
+                  </IconTooltip>
                 </div>
               </div>
             </section>
