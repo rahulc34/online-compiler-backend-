@@ -19,7 +19,7 @@ function InputOutputPanel({
 }: InputOutputPanelProps) {
   return (
     <Group orientation="vertical" className="h-full w-full min-h-0">
-      <Panel defaultSize={50} minSize={50}>
+      <Panel defaultSize="50%" minSize={50}>
         <InputPanel value={input} onChange={setInput} />
       </Panel>
 
@@ -27,7 +27,7 @@ function InputOutputPanel({
         <div className="h-[3px] w-12 rounded-full bg-[#363740] transition-colors group-hover:bg-blue-400 group-active:bg-blue-400" />
       </Separator>
 
-      <Panel defaultSize={50} minSize={50}>
+      <Panel defaultSize="50%" minSize={50}>
         <OutputPanel execution={execution} onCancel={onCancel} />
       </Panel>
     </Group>

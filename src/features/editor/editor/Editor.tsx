@@ -96,6 +96,11 @@ function loadEditorSettings(): EditorSettings {
 function Editor() {
   const { user, isLoading: isAuthLoading, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const [isMobileLayout, setIsMobileLayout] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches,
+  );
   const [searchParams] = useSearchParams();
   const [pendingEditorDraft] = useState(readPendingEditorDraft);
   const {
@@ -229,6 +234,14 @@ function Editor() {
     null,
   );
 
+  useEffect(() => {
+    const mobileQuery = window.matchMedia("(max-width: 767px)");
+    const updateLayout = () => setIsMobileLayout(mobileQuery.matches);
+
+    mobileQuery.addEventListener("change", updateLayout);
+    return () => mobileQuery.removeEventListener("change", updateLayout);
+  }, []);
+
   const currentLanguage = LANGUAGES.find(
     (language) => language.id === activeTab.language,
   )!;
@@ -339,11 +352,23 @@ function Editor() {
 
   return (
     <>
-      <div className="h-screen w-full overflow-hidden bg-[#08090c] p-2 text-white">
+      <div
+        className={`w-full bg-[#08090c] p-2 text-white ${
+          isMobileLayout
+            ? "h-[100dvh] overflow-hidden"
+            : "h-screen overflow-hidden"
+        }`}
+      >
         {/* MAIN RESIZABLE LAYOUT */}
-        <Group orientation="horizontal" className="h-full w-full min-h-0">
+        <Group
+          orientation={isMobileLayout ? "vertical" : "horizontal"}
+          className="h-full w-full min-h-0"
+        >
           {/* LEFT: CODE EDITOR */}
-          <Panel defaultSize={65} minSize={340}>
+          <Panel
+            defaultSize={isMobileLayout ? "45%" : "65%"}
+            minSize={isMobileLayout ? "20%" : 340}
+          >
             <section
               ref={editorSectionRef}
               className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-[#292a30] bg-[#0d0e12]"
@@ -559,13 +584,26 @@ function Editor() {
             </section>
           </Panel>
 
-          {/* VERTICAL RESIZE HANDLE */}
-          <Separator className="group flex w-2 shrink-0 cursor-col-resize items-center justify-center outline-none">
-            <div className="h-12 w-[3px] rounded-full bg-[#363740] transition-colors group-hover:bg-blue-400 group-active:bg-blue-400" />
+          {/* RESIZE HANDLE */}
+          <Separator
+            className={`group flex shrink-0 items-center justify-center outline-none ${
+              isMobileLayout
+                ? "h-2 w-full cursor-row-resize"
+                : "w-2 cursor-col-resize"
+            }`}
+          >
+            <div
+              className={`rounded-full bg-[#363740] transition-colors group-hover:bg-blue-400 group-active:bg-blue-400 ${
+                isMobileLayout ? "h-[3px] w-12" : "h-12 w-[3px]"
+              }`}
+            />
           </Separator>
 
           {/* RIGHT: INPUT AND OUTPUT */}
-          <Panel defaultSize={35} minSize={320}>
+          <Panel
+            defaultSize={isMobileLayout ? "55%" : "35%"}
+            minSize={isMobileLayout ? 48 : 320}
+          >
             <section className="h-full min-h-0 min-w-0 overflow-hidden">
               <ExecutionPanel
                 input={input}
