@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { OnMount } from "@monaco-editor/react";
 import type { ReactNode } from "react";
 import type { editor as MonacoEditorTypes } from "monaco-editor";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   Plus,
@@ -96,6 +96,7 @@ function loadEditorSettings(): EditorSettings {
 function Editor() {
   const { user, isLoading: isAuthLoading, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [pendingEditorDraft] = useState(readPendingEditorDraft);
   const {
     tabs,
@@ -105,7 +106,7 @@ function Editor() {
     addTab,
     closeTab,
     updateActiveTab,
-  } = useEditorTabs(pendingEditorDraft);
+  } = useEditorTabs(pendingEditorDraft, searchParams.get("language"));
 
   const [input, setInput] = useState(pendingEditorDraft?.stdin ?? "");
   const [activePanel, setActivePanel] = useState<ExecutionPanelTab>("io");

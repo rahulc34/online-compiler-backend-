@@ -11,9 +11,11 @@ const defaultLanguage = LANGUAGES.find(
 const createTab = (
   id: number,
   initialDraft?: Pick<PendingEditorDraft, "code" | "language"> | null,
+  initialLanguage?: string | null,
 ): EditorTab => {
   const language =
     LANGUAGES.find((item) => item.id === initialDraft?.language) ??
+    LANGUAGES.find((item) => item.id === initialLanguage) ??
     defaultLanguage;
 
   return {
@@ -24,8 +26,13 @@ const createTab = (
   };
 };
 
-export function useEditorTabs(initialDraft?: PendingEditorDraft | null) {
-  const [tabs, setTabs] = useState<EditorTab[]>([createTab(1, initialDraft)]);
+export function useEditorTabs(
+  initialDraft?: PendingEditorDraft | null,
+  initialLanguage?: string | null,
+) {
+  const [tabs, setTabs] = useState<EditorTab[]>([
+    createTab(1, initialDraft, initialLanguage),
+  ]);
 
   const [activeTabId, setActiveTabId] = useState("1");
   const [nextTabId, setNextTabId] = useState(2);

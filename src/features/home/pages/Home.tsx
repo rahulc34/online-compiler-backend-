@@ -35,8 +35,8 @@ function Home() {
 
       <main>
         <Hero />
-        <Features />
         <Languages />
+        <Features />
         <CTA />
       </main>
 

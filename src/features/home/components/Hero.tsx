@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -9,10 +10,41 @@ import {
   Maximize2,
   ChevronDown,
   Code2,
+  X,
 } from "lucide-react";
 
 function Hero() {
   const navigate = useNavigate();
+  const [isDemoOpen, setIsDemoOpen] = useState(false);
+  const [showPlaybackHint, setShowPlaybackHint] = useState(false);
+  const demoDialogRef = useRef<HTMLDialogElement>(null);
+  const demoVideoRef = useRef<HTMLVideoElement>(null);
+
+  const openDemo = () => {
+    const dialog = demoDialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
+
+    setIsDemoOpen(true);
+    setShowPlaybackHint(false);
+
+    const video = demoVideoRef.current;
+    if (!video) return;
+
+    video.currentTime = 0;
+    void video
+      .play()
+      .then(() => setShowPlaybackHint(false))
+      .catch(() => setShowPlaybackHint(true));
+  };
+
+  useEffect(() => {
+    const dialog = demoDialogRef.current;
+
+    if (!dialog) return;
+
+    if (isDemoOpen && !dialog.open) dialog.showModal();
+    else if (!isDemoOpen && dialog.open) dialog.close();
+  }, [isDemoOpen]);
 
   return (
     <section className="relative overflow-hidden px-6 md:px-10 pt-20 pb-24">
@@ -24,10 +56,6 @@ function Hero() {
         {/* LEFT CONTENT */}
         <div>
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 text-sm mb-7">
-            <Zap size={15} />
-            Your code. Your playground.
-          </div>
 
           {/* Heading */}
           <h1 className="text-5xl sm:text-6xl xl:text-7xl font-bold tracking-tight leading-[1.1] text-white">
@@ -59,11 +87,7 @@ function Hero() {
             </button>
 
             <button
-              onClick={() => {
-                document.getElementById("features")?.scrollIntoView({
-                  behavior: "smooth",
-                });
-              }}
+              onClick={openDemo}
               className="flex items-center gap-3 px-7 py-3.5 rounded-full border border-white/15 hover:bg-white/5 text-white font-medium transition"
             >
               <Play size={17} />
@@ -218,6 +242,54 @@ function Hero() {
           </div>
         </div>
       </div>
+
+      <dialog
+        ref={demoDialogRef}
+        aria-label="Compiler demo video"
+        onCancel={() => setIsDemoOpen(false)}
+        onClose={() => {
+          setIsDemoOpen(false);
+          demoVideoRef.current?.pause();
+          if (demoVideoRef.current) demoVideoRef.current.currentTime = 0;
+        }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setIsDemoOpen(false);
+        }}
+        className="m-auto w-[calc(100%-2rem)] max-w-5xl rounded-2xl border border-white/10 bg-[#080b14] p-0 text-white shadow-2xl backdrop:bg-black/80"
+      >
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+          <div>
+            <h2 className="font-semibold">Compiler demo</h2>
+            <p className="text-xs text-gray-400">
+              Edit, run, and view C++ output
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsDemoOpen(false)}
+            aria-label="Close demo video"
+            className="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <video
+          ref={demoVideoRef}
+          controls
+          playsInline
+          preload="auto"
+          onPlay={() => setShowPlaybackHint(false)}
+          className="block max-h-[75vh] w-full bg-black"
+        >
+          <source src="/demo/compiler-demo.mp4" type="video/mp4" />
+          Your browser does not support embedded video.
+        </video>
+        {showPlaybackHint && (
+          <p role="status" className="px-5 py-3 text-sm text-amber-300">
+            Press play to start the demo with sound.
+          </p>
+        )}
+      </dialog>
     </section>
   );
 }

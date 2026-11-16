@@ -21,6 +21,18 @@ int main() {
 }`,
   },
   {
+    id: "c",
+    label: "C",
+    monacoLanguage: "c",
+    extension: "c",
+    defaultCode: `#include <stdio.h>
+
+int main(void) {
+    printf("Hello, World!\\n");
+    return 0;
+}`,
+  },
+  {
     id: "java",
     label: "Java",
     monacoLanguage: "java",

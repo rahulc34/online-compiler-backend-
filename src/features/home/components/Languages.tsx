@@ -1,7 +1,9 @@
 import { ArrowUpRight, Code2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const languages = [
   {
+    id: "cpp",
     name: "C++",
     extension: ".cpp",
     description: "High-performance programming",
@@ -10,6 +12,7 @@ const languages = [
     glow: "group-hover:shadow-blue-500/10",
   },
   {
+    id: "c",
     name: "C",
     extension: ".c",
     description: "Low-level system programming",
@@ -18,6 +21,7 @@ const languages = [
     glow: "group-hover:shadow-blue-400/10",
   },
   {
+    id: "java",
     name: "Java",
     extension: ".java",
     description: "Object-oriented programming",
@@ -26,6 +30,7 @@ const languages = [
     glow: "group-hover:shadow-orange-500/10",
   },
   {
+    id: "python",
     name: "Python",
     extension: ".py",
     description: "Simple and versatile programming",
@@ -34,6 +39,7 @@ const languages = [
     glow: "group-hover:shadow-yellow-500/10",
   },
   {
+    id: "javascript",
     name: "JavaScript",
     extension: ".js",
     description: "Dynamic web programming",
@@ -44,6 +50,8 @@ const languages = [
 ];
 
 function Languages() {
+  const navigate = useNavigate();
+
   return (
     <section
       id="languages"
@@ -76,9 +84,14 @@ function Languages() {
         {/* Language Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
           {languages.map((language) => (
-            <div
+            <button
+              type="button"
               key={language.name}
-              className={`group relative bg-[#111521] border border-white/[0.08] rounded-2xl p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl ${language.color} ${language.glow}`}
+              onClick={() =>
+                navigate(`/editor?language=${encodeURIComponent(language.id)}`)
+              }
+              aria-label={`Open the ${language.name} editor`}
+              className={`group relative cursor-pointer border border-white/[0.08] bg-[#111521] rounded-2xl p-6 text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${language.color} ${language.glow}`}
             >
               {/* Extension */}
               <div className="flex justify-between items-center">
@@ -111,7 +124,7 @@ function Languages() {
               <p className="text-xs text-gray-500 text-center mt-2 leading-relaxed">
                 {language.description}
               </p>
-            </div>
+            </button>
           ))}
         </div>
 
