@@ -1,5 +1,13 @@
-import { useState } from "react";
-import { ArrowLeftRight, LogIn, Terminal, SquareTerminal } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeftRight,
+  ChevronDown,
+  LoaderCircle,
+  LogIn,
+  LogOut,
+  Terminal,
+  SquareTerminal,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 import InputOutputPanel from "../../input-output/components/InputOutputPanel";
@@ -31,11 +39,60 @@ function ExecutionPanel({
   onActiveTabChange,
 }: ExecutionPanelProps) {
   const [activeTab, setActiveTab] = useState<ExecutionPanelTab>("io");
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !profileMenuRef.current?.contains(event.target)
+      ) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsProfileMenuOpen(false);
+        profileButtonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isProfileMenuOpen]);
 
   const selectTab = (tab: ExecutionPanelTab) => {
     setActiveTab(tab);
     onActiveTabChange(tab);
+  };
+
+  const handleLogout = async () => {
+    setLogoutError("");
+    setIsSigningOut(true);
+
+    try {
+      await logout();
+      setIsProfileMenuOpen(false);
+    } catch (error) {
+      setLogoutError(
+        error instanceof Error ? error.message : "Unable to sign out.",
+      );
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   return (
@@ -75,17 +132,78 @@ function ExecutionPanel({
               className="h-8 w-8 animate-pulse rounded-full bg-[#202633]"
             />
           ) : user ? (
-            <div
-              aria-label={`Signed in as ${user.name}`}
-              title={user.email}
-              className="flex h-8 max-w-36 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1 pl-1 pr-2"
-            >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 text-[10px] font-bold text-white">
-                {user.name.trim().charAt(0).toUpperCase() || "U"}
-              </span>
-              <span className="hidden truncate text-xs font-medium text-gray-300 xl:block">
-                {user.name}
-              </span>
+            <div className="relative" ref={profileMenuRef}>
+              <button
+                ref={profileButtonRef}
+                type="button"
+                aria-expanded={isProfileMenuOpen}
+                aria-controls="editor-profile-menu"
+                aria-label={
+                  isProfileMenuOpen ? "Close account menu" : "Open account menu"
+                }
+                onClick={() => {
+                  setLogoutError("");
+                  setIsProfileMenuOpen((isOpen) => !isOpen);
+                }}
+                className="flex h-8 max-w-36 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1 pl-1 pr-2 transition hover:border-blue-400/40 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 text-[10px] font-bold text-white">
+                  {user.name.trim().charAt(0).toUpperCase() || "U"}
+                </span>
+                <span className="hidden truncate text-xs font-medium text-gray-300 xl:block">
+                  {user.name}
+                </span>
+                <ChevronDown
+                  size={12}
+                  aria-hidden="true"
+                  className={`text-gray-400 transition-transform ${
+                    isProfileMenuOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {isProfileMenuOpen && (
+                <div
+                  id="editor-profile-menu"
+                  className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-white/10 bg-[#101522] p-2 shadow-2xl shadow-black/50"
+                >
+                  <div className="rounded-lg bg-white/[0.04] px-3 py-2.5">
+                    <p className="truncate text-sm font-medium text-white">
+                      {user.name}
+                    </p>
+                    <p className="truncate text-xs text-gray-400">
+                      {user.email}
+                    </p>
+                  </div>
+
+                  {logoutError && (
+                    <p
+                      role="alert"
+                      className="px-3 py-2 text-xs text-red-300"
+                    >
+                      {logoutError}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={isSigningOut}
+                    className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-300 transition hover:bg-red-400/10 hover:text-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {isSigningOut ? (
+                      <LoaderCircle
+                        size={14}
+                        aria-hidden="true"
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <LogOut size={14} aria-hidden="true" />
+                    )}
+                    {isSigningOut ? "Signing out..." : "Sign out"}
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <Link
