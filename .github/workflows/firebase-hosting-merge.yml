@@ -1,0 +1,17 @@
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      VITE_API_BASE_URL: https://api.cloudide.in/api/v1
+      VITE_SITE_URL: https://cloudide.in
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci && npm run build
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CLOUDIDE_498AB }}
+          channelId: live
+          projectId: cloudide-498ab
